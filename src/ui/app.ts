@@ -6,9 +6,10 @@ import { Orchestrator } from '../orchestrator.js';
 import { ChatUI } from './chat.js';
 import { SettingsUI } from './settings.js';
 import { TasksUI } from './tasks.js';
+import { RetirementUI } from './retirement.js';
 import type { StoredMessage, ThinkingLogEntry } from '../types.js';
 
-export type View = 'chat' | 'settings' | 'tasks';
+export type View = 'chat' | 'settings' | 'tasks' | 'retirement';
 
 /**
  * Top-level UI controller. Manages the app shell, navigation,
@@ -19,6 +20,7 @@ export class AppUI {
   private chatUI: ChatUI;
   private settingsUI: SettingsUI;
   private tasksUI: TasksUI;
+  private retirementUI: RetirementUI;
   private currentView: View = 'chat';
   private root: HTMLElement;
 
@@ -28,6 +30,7 @@ export class AppUI {
     this.chatUI = new ChatUI(this.orchestrator);
     this.settingsUI = new SettingsUI(this.orchestrator, () => this.navigate('chat'));
     this.tasksUI = new TasksUI(this.orchestrator);
+    this.retirementUI = new RetirementUI();
   }
 
   /**
@@ -116,8 +119,9 @@ export class AppUI {
     const nav = el('nav', 'app-nav');
     const chatBtn = this.navButton('💬', 'Chat', 'chat');
     const tasksBtn = this.navButton('⏰', 'Tasks', 'tasks');
+    const retirementBtn = this.navButton('📋', 'Retire', 'retirement');
     const settingsBtn = this.navButton('⚙️', 'Settings', 'settings');
-    nav.append(chatBtn, tasksBtn, settingsBtn);
+    nav.append(chatBtn, tasksBtn, retirementBtn, settingsBtn);
     header.appendChild(nav);
 
     this.root.appendChild(header);
@@ -138,7 +142,11 @@ export class AppUI {
     tasksView.id = 'view-tasks';
     this.tasksUI.mount(tasksView);
 
-    content.append(chatView, settingsView, tasksView);
+    const retirementView = el('div', 'view');
+    retirementView.id = 'view-retirement';
+    void this.retirementUI.mount(retirementView);
+
+    content.append(chatView, settingsView, tasksView, retirementView);
     this.root.appendChild(content);
 
     this.updateView();
@@ -155,7 +163,7 @@ export class AppUI {
 
   private updateView(): void {
     // Toggle view visibility
-    const views = ['chat', 'settings', 'tasks'] as const;
+    const views = ['chat', 'settings', 'tasks', 'retirement'] as const;
     for (const v of views) {
       const viewEl = document.getElementById(`view-${v}`);
       if (viewEl) {
