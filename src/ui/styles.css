@@ -1718,6 +1718,38 @@ body {
 .ret-table-sm th,
 .ret-table-sm td { padding: 4px 6px; }
 
+/* ── Extracurricular activity rows ─────────────────────────────────────── */
+.ret-ec-row {
+  display: grid;
+  grid-template-columns: 1fr 160px 120px auto;
+  gap: 8px;
+  align-items: center;
+  grid-column: 1 / -1;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ret-ec-row:last-of-type { border-bottom: none; }
+
+.ret-ec-cost-wrap { display: flex; align-items: center; }
+
+.ret-ec-membership-badge {
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: 99px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.ret-ec-age-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ret-ec-age-range .ret-input-num { width: 48px; text-align: center; }
+.ret-ec-age-range .ret-label { font-size: 11px; color: var(--text-muted); }
+
 /* ---------------------------------------------------------------------------
  * Responsive
  * --------------------------------------------------------------------------- */

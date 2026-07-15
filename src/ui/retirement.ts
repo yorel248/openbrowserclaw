@@ -721,6 +721,8 @@ export class RetirementUI {
     this.renderSchoolFees(wrap, le);
     // University
     this.renderUniversity(wrap, le);
+    // Extracurricular activities
+    this.renderExtracurricular(wrap, le);
     // Wedding
     this.renderWedding(wrap, le);
     // House Deposit
@@ -732,13 +734,14 @@ export class RetirementUI {
     const tableWrap = h('div', 'ret-table-wrap');
     tableWrap.innerHTML = `
       <table class="ret-table">
-        <thead><tr><th>Event</th><th>Low</th><th>Mid</th><th>High</th></tr></thead>
+        <thead><tr><th>Event</th><th>Low</th><th>Mid</th><th>High</th><th>Your Estimate</th></tr></thead>
         <tbody>
-          <tr><td>School Fees K–12</td><td>$105,000</td><td>$310,000</td><td>$845,000</td></tr>
-          <tr><td>University (parental support only)</td><td>$100,000</td><td>$135,000</td><td>$210,000</td></tr>
-          <tr><td>Wedding (parental contribution)</td><td>$10,000</td><td>$30,000</td><td>$50,000+</td></tr>
-          <tr><td>House Deposit NSW (5%–20%)</td><td>$51,500</td><td>$150,000</td><td>$265,000</td></tr>
-          <tr class="ret-table-total"><td><strong>Your Projected Total</strong></td><td colspan="3"><strong>${fmtCurrency(summary.grandTotalInflated)}</strong></td></tr>
+          <tr><td>School Fees K–12</td><td>$105,000</td><td>$310,000</td><td>$845,000</td><td>${summary.schoolFeesTotalInflated > 0 ? fmtCurrency(summary.schoolFeesTotalInflated) : '—'}</td></tr>
+          <tr><td>University (parental support only)</td><td>$100,000</td><td>$135,000</td><td>$210,000</td><td>${summary.uniLivingSupportTotal > 0 ? fmtCurrency(summary.uniLivingSupportTotal) : '—'}</td></tr>
+          <tr><td>Extracurricular Activities</td><td>$30,000</td><td>$80,000</td><td>$160,000+</td><td>${summary.extracurricularTotal > 0 ? fmtCurrency(summary.extracurricularTotal) : '—'}</td></tr>
+          <tr><td>Wedding (parental contribution)</td><td>$10,000</td><td>$30,000</td><td>$50,000+</td><td>${summary.weddingInflated > 0 ? fmtCurrency(summary.weddingInflated) : '—'}</td></tr>
+          <tr><td>House Deposit NSW (5%–20%)</td><td>$51,500</td><td>$150,000</td><td>$265,000</td><td>${summary.depositInflated > 0 ? fmtCurrency(summary.depositInflated) : '—'}</td></tr>
+          <tr class="ret-table-total"><td><strong>Your Projected Total</strong></td><td colspan="4"><strong>${fmtCurrency(summary.grandTotalInflated)}</strong></td></tr>
         </tbody>
       </table>
     `;
@@ -817,6 +820,83 @@ export class RetirementUI {
       etbNote.innerHTML = '<strong>Note:</strong> University/TAFE tuition and textbooks are eligible for ETB. General living costs are NOT eligible — must be paid from cash.';
       grid.appendChild(etbNote);
     }
+    card.appendChild(grid);
+    wrap.appendChild(card);
+  }
+
+  private renderExtracurricular(wrap: HTMLElement, le: typeof this.plan.lifeEvents): void {
+    const activities = le.extracurricular ?? [];
+    const card = formCard('Extracurricular Activities');
+    const grid = h('div', 'ret-form-grid');
+
+    const membershipNote = h('div', 'ret-note');
+    membershipNote.innerHTML = `Activities marked <strong>membership-covered</strong> have no additional cost — they are funded by an existing membership (e.g. YMCA gym).`;
+    grid.appendChild(membershipNote);
+
+    for (const act of activities) {
+      const row = h('div', 'ret-ec-row');
+
+      const nameEl = input(act.name, v => { act.name = v; this.scheduleSave(); });
+      nameEl.placeholder = 'Activity name';
+      nameEl.style.fontWeight = '600';
+
+      const costWrap = h('div', 'ret-ec-cost-wrap');
+      if (act.coveredByMembership) {
+        const badge = h('span', 'ret-ec-membership-badge');
+        badge.textContent = act.membershipNote || 'Membership covered';
+        costWrap.appendChild(badge);
+      } else {
+        const costEl = currencyInput(act.annualCost, v => { act.annualCost = v; this.scheduleSave(); });
+        costEl.title = 'Annual cost today ($)';
+        costWrap.appendChild(costEl);
+      }
+
+      const ageRange = h('div', 'ret-ec-age-range');
+      const ageFrom = numInput(act.startAge, v => { act.startAge = v; this.scheduleSave(); });
+      ageFrom.title = 'Start age';
+      const ageTo = numInput(act.endAge, v => { act.endAge = v; this.scheduleSave(); });
+      ageTo.title = 'End age';
+      ageRange.innerHTML = `<span class="ret-label">Age</span>`;
+      ageRange.appendChild(ageFrom);
+      ageRange.innerHTML += `<span class="ret-label">–</span>`;
+      ageRange.appendChild(ageTo);
+
+      const removeBtn = btn('×', 'ret-remove-inline', () => {
+        le.extracurricular = le.extracurricular.filter(a => a.id !== act.id);
+        this.scheduleSave();
+        this.renderSection();
+      });
+
+      row.appendChild(nameEl);
+      row.appendChild(costWrap);
+      row.appendChild(ageRange);
+      row.appendChild(removeBtn);
+      grid.appendChild(row);
+    }
+
+    grid.appendChild(btn('+ Add Activity', 'ret-add-btn-sm', () => {
+      le.extracurricular = [...(le.extracurricular ?? []), {
+        id: `ec-${Date.now()}`, name: '', annualCost: 0,
+        coveredByMembership: false, membershipNote: '',
+        startAge: 5, endAge: 17, feeInflationRate: 3.0,
+      }];
+      this.scheduleSave();
+      this.renderSection();
+    }));
+
+    // Annual cost summary (current year, uninflated)
+    const annualTotal = activities.filter(a => !a.coveredByMembership).reduce((s, a) => s + a.annualCost, 0);
+    const coveredItems = activities.filter(a => a.coveredByMembership).map(a => a.name).join(', ');
+    if (annualTotal > 0 || coveredItems) {
+      const summaryEl = h('div', 'ret-info-bar');
+      summaryEl.style.marginTop = '8px';
+      summaryEl.innerHTML = `
+        <span class="ret-info-item"><strong>Annual cost (today's $):</strong> ${fmtCurrency(annualTotal)}/yr</span>
+        ${coveredItems ? `<span class="ret-info-item"><strong>Membership covered:</strong> ${coveredItems}</span>` : ''}
+      `;
+      grid.appendChild(summaryEl);
+    }
+
     card.appendChild(grid);
     wrap.appendChild(card);
   }

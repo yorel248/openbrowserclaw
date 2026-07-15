@@ -272,6 +272,7 @@ export interface GwynetLifeEventSummary {
   uniTuitionTotal: number;
   weddingInflated: number;
   depositInflated: number;
+  extracurricularTotal: number;
   grandTotalInflated: number;
   centrelinkGiftingAlert: boolean;
   giftAmount: number;
@@ -336,6 +337,18 @@ export function calcLifeEventSummary(
     le.houseDeposit.giftOrLoan === 'gift' &&
     depositAmount > 10000;
 
+  // Extracurricular activities (excludes membership-covered items)
+  let extracurricularTotal = 0;
+  for (const act of (le.extracurricular ?? [])) {
+    if (act.coveredByMembership || act.annualCost <= 0) continue;
+    const actYears = Math.max(0, act.endAge - act.startAge);
+    const actStartYear = birthYear + act.startAge;
+    for (let y = 0; y < actYears; y++) {
+      const yrsFromNow = (actStartYear + y) - cy;
+      extracurricularTotal += inflatedAmount(act.annualCost, act.feeInflationRate, Math.max(0, yrsFromNow));
+    }
+  }
+
   return {
     schoolFeesTotalInflated: Math.round(schoolTotal),
     schoolFeesBondEligible: le.schoolFees.fundingSource !== 'cash'
@@ -345,7 +358,8 @@ export function calcLifeEventSummary(
     uniTuitionTotal: Math.round(uniTuition),
     weddingInflated,
     depositInflated,
-    grandTotalInflated: Math.round(schoolTotal + uniLiving + uniTuition + weddingInflated + depositInflated),
+    extracurricularTotal: Math.round(extracurricularTotal),
+    grandTotalInflated: Math.round(schoolTotal + uniLiving + uniTuition + weddingInflated + depositInflated + extracurricularTotal),
     centrelinkGiftingAlert: centrelinkAlert,
     giftAmount: depositAmount,
   };
@@ -461,6 +475,13 @@ export function runProjection(plan: RetirementPlan): ProjectionSummary {
         : le.houseDeposit.customAmount;
       const depositCost = inflatedAmount(depositBase, plan.assumptions.propertyGrowthRate, Math.max(0, year - cy));
       lifeEventExp += depositCost;
+    }
+    // Extracurricular (membership-covered items cost $0 extra)
+    for (const act of (le.extracurricular ?? [])) {
+      if (act.coveredByMembership || act.annualCost <= 0) continue;
+      if (gwAge >= act.startAge && gwAge < act.endAge) {
+        lifeEventExp += inflatedAmount(act.annualCost, act.feeInflationRate, Math.max(0, year - cy));
+      }
     }
 
     // Employment income

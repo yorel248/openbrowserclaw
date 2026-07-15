@@ -257,6 +257,17 @@ export const FUTURITY_SP3 = {
 // Section 15 — Life Events: Gwyneth (FR-059 to FR-064)
 // ---------------------------------------------------------------------------
 
+export interface ExtracurricularActivity {
+  id: string;
+  name: string;
+  annualCost: number;
+  coveredByMembership: boolean;
+  membershipNote: string;
+  startAge: number;
+  endAge: number;
+  feeInflationRate: number;
+}
+
 export interface LifeEventsData {
   beneficiaryName: string;
   beneficiaryDateOfBirth: string;
@@ -264,6 +275,7 @@ export interface LifeEventsData {
   university: UniversityEvent;
   wedding: WeddingEvent;
   houseDeposit: HouseDepositEvent;
+  extracurricular: ExtracurricularActivity[];
 }
 
 export type SchoolType =
@@ -560,6 +572,12 @@ export function createDefaultPlan(name = 'My Retirement Plan'): RetirementPlan {
         loanRepaymentAmount: 0,
         fundingSource: 'cash',
       },
+      extracurricular: [
+        { id: 'ec-piano',    name: 'Piano',     annualCost: 3600, coveredByMembership: false, membershipNote: '',                          startAge: 5,  endAge: 17, feeInflationRate: 3.0 },
+        { id: 'ec-tennis',   name: 'Tennis',    annualCost: 2400, coveredByMembership: false, membershipNote: '',                          startAge: 5,  endAge: 17, feeInflationRate: 3.0 },
+        { id: 'ec-swimming', name: 'Swimming',  annualCost: 0,    coveredByMembership: true,  membershipNote: 'Covered by YMCA gym membership', startAge: 5, endAge: 17, feeInflationRate: 0   },
+        { id: 'ec-ballet',   name: 'Ballet',    annualCost: 2800, coveredByMembership: false, membershipNote: '',                          startAge: 5,  endAge: 12, feeInflationRate: 3.0 },
+      ],
     },
     assumptions: { ...DEFAULT_ASSUMPTIONS },
   };
